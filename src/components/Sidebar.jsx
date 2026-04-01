@@ -17,7 +17,7 @@ export default function Sidebar({ page, setPage }) {
   const statusDot = { connected: '#7a9e7e', offline: '#c07a62', connecting: '#c4a55a' }[fbStatus];
 
   return (
-    <div style={{ width: 200, background: C.sidebar, display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 100 }}>
+    <div style={{ width: 200, background: C.sidebar, display: 'flex', flexDirection: 'column', flexShrink: 0, position: 'fixed', top: 0, left: 0, height: '100vh', zIndex: 1100 }}>
       <div style={{ padding: '28px 20px 20px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ fontSize: 15, fontWeight: 600, color: '#e8f0e9' }}>🌿 派案系統</div>
         <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 6 }}>{currentUser?.name}</div>
@@ -46,7 +46,6 @@ export default function Sidebar({ page, setPage }) {
       </nav>
 
       <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        {/* Firebase status */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', marginBottom: 4 }}>
           <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusDot, flexShrink: 0, animation: fbStatus === 'connecting' ? 'pulse 1.2s infinite' : 'none' }} />
           <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)' }}>
