@@ -1,31 +1,18 @@
-import { useState } from 'react';
 import { useApp } from '../AppContext';
-import { today, daysBetween } from '../utils/helpers';
-import { Card, PageHeader, BtnSmall, BtnPrimary, BtnSecondary, Badge, Input, Alert, C } from '../components/UI';
+import { today, daysBetween, NO_ENTRY_CODES } from '../utils/helpers';
+import { Card, PageHeader, BtnSmall, Badge, C } from '../components/UI';
 
 export default function Dashboard({ setPage }) {
-  const { currentUser, cases, masterCases, updateMasterCase } = useApp();
+  const { currentUser, cases } = useApp();
   const t = today();
   const myCases = currentUser?.role === 'admin' ? cases : cases.filter(c => c.managerId === currentUser?.id);
-  const trackable = myCases.filter(c => c.status !== '不承接');
+  const trackable = myCases.filter(c => c.status !== '不承接' && !NO_ENTRY_CODES.includes(c.codeType));
   const withoutEntry = trackable.filter(c => !c.entryDate);
   const overdue = withoutEntry.filter(c => daysBetween(c.referralDate, t) > 5);
   const pending = withoutEntry.filter(c => daysBetween(c.referralDate, t) <= 5);
   const completed = trackable.filter(c => c.entryDate);
   const monthCases = myCases.filter(c => c.referralDate?.startsWith(t.slice(0, 7)));
   const recent = [...myCases].sort((a, b) => b.referralDate?.localeCompare(a.referralDate)).slice(0, 10);
-
-  const myMasterCases = Object.values(masterCases || {}).filter(ex =>
-    !ex.closeDate &&
-    (currentUser?.role === 'admin' || ex.managerId === currentUser?.id)
-  );
-
-  const noPlanDate = myMasterCases.filter(ex => !ex.planDate);
-  const noApproval = myMasterCases.filter(ex => !ex.approvalDate);
-  const needsCloseInfo = Object.values(masterCases || {}).filter(ex =>
-    ex.needsCloseInfo && !ex.closeReason &&
-    (currentUser?.role === 'admin' || ex.managerId === currentUser?.id)
-  );
 
   const stats = [
     { label: '本月派案', val: monthCases.length, color: C.accent, bg: C.accentL, icon: '📋', link: false },
@@ -34,81 +21,9 @@ export default function Dashboard({ setPage }) {
     { label: '已完成進場', val: completed.length, color: C.success, bg: C.successL, icon: '✅', link: false },
   ];
 
-  // ── 通過日期補填 Modal ─────────────────────────────────────────────
-  const [approvalModal, setApprovalModal] = useState(false);
-  const [drafts, setDrafts] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState(null);
-
-  function openApprovalModal() {
-    const init = {};
-    noApproval.forEach(ex => { init[ex.key] = ''; });
-    setDrafts(init);
-    setSaveMsg(null);
-    setApprovalModal(true);
-  }
-
-  async function saveApprovals() {
-    const toSave = noApproval.filter(ex => drafts[ex.key]);
-    if (toSave.length === 0) {
-      setSaveMsg({ type: 'warn', text: '尚未填寫任何通過日期' });
-      return;
-    }
-    setSaving(true);
-    try {
-      for (const ex of toSave) {
-        await updateMasterCase(ex.key, { approvalDate: drafts[ex.key] });
-      }
-      setSaveMsg({ type: 'success', text: `✓ 已更新 ${toSave.length} 筆通過日期` });
-      setTimeout(() => { setApprovalModal(false); setSaveMsg(null); }, 1500);
-    } catch (e) {
-      setSaveMsg({ type: 'error', text: `儲存失敗：${e.message}` });
-    }
-    setSaving(false);
-  }
-
   return (
     <div>
       <PageHeader title="總覽" subtitle={`今日：${t}`} />
-
-      {noPlanDate.length > 0 && (
-        <div style={{ background: C.accentL, border: `1px solid ${C.accent}44`, borderRadius: 14, padding: '14px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 22 }}>📅</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: C.accent, fontWeight: 600, fontSize: 14 }}>有 {noPlanDate.length} 筆個案尚未填寫計畫日期</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-              {noPlanDate.slice(0, 3).map(ex => ex.clientName).join('、')}{noPlanDate.length > 3 ? `…等 ${noPlanDate.length} 人` : ''}
-            </div>
-          </div>
-          <BtnSmall onClick={() => setPage('masterList')} style={{ background: C.accent, color: '#fff', border: 'none', whiteSpace: 'nowrap' }}>前往個案總表</BtnSmall>
-        </div>
-      )}
-
-      {noApproval.length > 0 && (
-        <div style={{ background: C.warningL, border: '1px solid #e8d5a0', borderRadius: 14, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 22 }}>📋</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: C.warning, fontWeight: 600, fontSize: 14 }}>有 {noApproval.length} 筆個案尚未填寫通過日期</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-              {noApproval.slice(0, 3).map(ex => ex.clientName).join('、')}{noApproval.length > 3 ? `…等 ${noApproval.length} 人` : ''}
-            </div>
-          </div>
-          <BtnSmall onClick={openApprovalModal} style={{ background: C.warning, color: '#fff', border: 'none', whiteSpace: 'nowrap' }}>前往填寫</BtnSmall>
-        </div>
-      )}
-
-      {needsCloseInfo.length > 0 && (
-        <div style={{ background: C.alertL, border: '1px solid #e0a090', borderRadius: 14, padding: '14px 20px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 14 }}>
-          <span style={{ fontSize: 22 }}>🔔</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: C.alert, fontWeight: 600, fontSize: 14 }}>有 {needsCloseInfo.length} 筆個案已自動結案，尚未填寫結案資訊</div>
-            <div style={{ color: C.muted, fontSize: 12, marginTop: 2 }}>
-              {needsCloseInfo.slice(0, 3).map(ex => ex.clientName).join('、')}{needsCloseInfo.length > 3 ? `…等 ${needsCloseInfo.length} 人` : ''}
-            </div>
-          </div>
-          <BtnSmall onClick={() => setPage('masterList')} style={{ background: C.alert, color: '#fff', border: 'none', whiteSpace: 'nowrap' }}>前往填寫結案</BtnSmall>
-        </div>
-      )}
 
       {overdue.length > 0 && (
         <div style={{ background: C.alertL, border: '1px solid #e0a090', borderRadius: 14, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -176,66 +91,6 @@ export default function Dashboard({ setPage }) {
           </div>
         )}
       </Card>
-
-      {/* ── 通過日期補填 Modal ── */}
-      {approvalModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(60,50,42,0.5)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999,
-        }} onClick={e => { if (e.target === e.currentTarget) setApprovalModal(false); }}>
-          <div style={{
-            background: C.card, borderRadius: 22, padding: 32,
-            maxWidth: 560, width: '92%', maxHeight: '85vh', overflowY: 'auto',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
-          }} onClick={e => e.stopPropagation()}>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 600 }}>填寫通過日期</h3>
-                <div style={{ fontSize: 12, color: C.muted, marginTop: 4 }}>共 {noApproval.length} 筆待填寫，填寫後同步更新個案總表</div>
-              </div>
-              <button onClick={() => setApprovalModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: C.muted, lineHeight: 1 }}>✕</button>
-            </div>
-
-            {saveMsg && <div style={{ marginBottom: 16 }}><Alert type={saveMsg.type}>{saveMsg.text}</Alert></div>}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
-              {/* 欄位標頭 */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 160px', gap: 12, padding: '0 4px' }}>
-                <div style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>個案姓名</div>
-                <div style={{ fontSize: 11, color: C.muted, fontWeight: 500 }}>通過日期</div>
-              </div>
-
-              {noApproval.map(ex => (
-                <div key={ex.key} style={{
-                  display: 'grid', gridTemplateColumns: '1fr 160px', gap: 12, alignItems: 'center',
-                  padding: '10px 14px', borderRadius: 10,
-                  background: drafts[ex.key] ? C.successL || '#edf3ee' : C.bg,
-                  border: `1px solid ${drafts[ex.key] ? C.success + '60' : C.border}`,
-                  transition: 'background 0.2s',
-                }}>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{ex.clientName}</div>
-                    {ex.caseNumber && <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>案號：{ex.caseNumber}</div>}
-                  </div>
-                  <Input
-                    type="date"
-                    value={drafts[ex.key] || ''}
-                    onChange={e => setDrafts(d => ({ ...d, [ex.key]: e.target.value }))}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', gap: 10 }}>
-              <BtnPrimary onClick={saveApprovals} disabled={saving} style={{ flex: 1 }}>
-                {saving ? '儲存中…' : '儲存通過日期'}
-              </BtnPrimary>
-              <BtnSecondary onClick={() => setApprovalModal(false)}>取消</BtnSecondary>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

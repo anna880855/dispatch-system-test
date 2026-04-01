@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../AppContext';
-import { today, daysBetween } from '../utils/helpers';
+import { today, daysBetween, NO_ENTRY_CODES } from '../utils/helpers';
 import { Card, PageHeader, BtnSmall, Badge, Input, Select, Alert, C } from '../components/UI';
 
 export default function Entry() {
-  const { currentUser, cases, updateCase, deleteCase } = useApp();
-  const isAdmin = currentUser?.role === 'admin';
+  const { currentUser, cases, updateCase } = useApp();
   const [editing, setEditing] = useState(null);
   const [entryDate, setEntryDate] = useState(today());
   const [overdueType, setOverdueType] = useState('案家因素');
@@ -15,8 +14,8 @@ export default function Entry() {
   const t = today();
 
   const myCases = currentUser?.role === 'admin' ? cases : cases.filter(c => c.managerId === currentUser?.id);
-  const pending = myCases.filter(c => !c.entryDate && c.status !== '不承接').sort((a, b) => a.referralDate?.localeCompare(b.referralDate));
-  const completed = myCases.filter(c => c.entryDate && c.status !== '不承接').sort((a, b) => b.entryDate?.localeCompare(a.entryDate));
+  const pending = myCases.filter(c => !c.entryDate && c.status !== '不承接' && !NO_ENTRY_CODES.includes(c.codeType)).sort((a, b) => a.referralDate?.localeCompare(b.referralDate));
+  const completed = myCases.filter(c => c.entryDate && c.status !== '不承接' && !NO_ENTRY_CODES.includes(c.codeType)).sort((a, b) => b.entryDate?.localeCompare(a.entryDate));
 
   function startEdit(c) {
     setEditing(c);
@@ -32,8 +31,8 @@ export default function Entry() {
     const updates = { entryDate };
     if (days > 5) { updates.overdueType = overdueType; updates.overdueReason = overdueReason; }
     await updateCase(editing.id, updates);
-    setSaveMsg({ type: 'success', text: '✓ 進場日期已儲存' });
-    setTimeout(() => { setEditing(null); setSaveMsg(null); }, 1000);
+    setEditing(null);
+    setSaveMsg(null);
   }
 
   const editDays = editing && entryDate ? daysBetween(editing.referralDate, entryDate) : 0;
@@ -94,12 +93,7 @@ export default function Entry() {
                 )}
               </div>
               {!isEditing && (
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <BtnSmall onClick={() => startEdit(c)} style={{ background: C.accent, color: '#fff', border: 'none', whiteSpace: 'nowrap' }}>填寫進場日</BtnSmall>
-                  {isAdmin && (
-                    <BtnSmall onClick={async () => { if (window.confirm(`確定要刪除「${c.clientName}」的這筆派案紀錄？此操作無法復原。`)) await deleteCase(c.id); }} style={{ background: C.alertL, color: C.alert, border: `1px solid ${C.alert}44`, whiteSpace: 'nowrap' }}>刪除</BtnSmall>
-                  )}
-                </div>
+                <BtnSmall onClick={() => startEdit(c)} style={{ background: C.accent, color: '#fff', border: 'none', whiteSpace: 'nowrap', flexShrink: 0 }}>填寫進場日</BtnSmall>
               )}
             </div>
           );
@@ -115,7 +109,7 @@ export default function Entry() {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead style={{ background: C.bg }}>
-                <tr>{['照會日', '個案姓名', '碼別', '派案單位', '進場日', '天數', '逾期原因', ...(isAdmin ? [''] : [])].map(h => (
+                <tr>{['照會日', '個案姓名', '碼別', '派案單位', '進場日', '天數', '逾期原因'].map(h => (
                   <th key={h} style={{ textAlign: 'left', padding: '10px 14px', color: C.muted, fontWeight: 500, fontSize: 12, borderBottom: `1px solid ${C.border}` }}>{h}</th>
                 ))}</tr>
               </thead>
@@ -131,11 +125,6 @@ export default function Entry() {
                       <td style={{ padding: '10px 14px' }}>{c.entryDate}</td>
                       <td style={{ padding: '10px 14px' }}><span style={{ color: days > 5 ? C.alert : C.success, fontWeight: 500 }}>{days} 天</span></td>
                       <td style={{ padding: '10px 14px', fontSize: 12, color: C.muted }}>{c.overdueType ? `${c.overdueType}：${c.overdueReason}` : '—'}</td>
-                      {isAdmin && (
-                        <td style={{ padding: '10px 14px' }}>
-                          <button onClick={async () => { if (window.confirm(`確定要刪除「${c.clientName}」的這筆派案紀錄？此操作無法復原。`)) await deleteCase(c.id); }} style={{ background: 'none', border: 'none', color: C.alert, cursor: 'pointer', fontSize: 16, padding: 4 }} title="刪除">🗑</button>
-                        </td>
-                      )}
                     </tr>
                   );
                 })}
