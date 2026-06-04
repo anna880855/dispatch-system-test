@@ -119,7 +119,7 @@ function TimelineRow({ label, value, prev, color }) {
 }
 
 export default function PlanTimeline() {
-  const { currentUser, cases, updateCase } = useApp();
+  const { currentUser, cases, updateCase, syncPlanToSheets } = useApp();
   const [editing, setEditing] = useState(null);
   const [showDone, setShowDone] = useState(false);
 
@@ -137,6 +137,8 @@ export default function PlanTimeline() {
 
   async function handleSave(caseId, form) {
     await updateCase(caseId, form);
+    const c = cases.find(x => x.id === caseId);
+    if (c) syncPlanToSheets({ ...c, ...form });
     setEditing(null);
   }
 
