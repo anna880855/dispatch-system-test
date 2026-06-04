@@ -7,6 +7,7 @@ import CasesList from './pages/CasesList';
 import Entry from './pages/Entry';
 import Admin from './pages/Admin';
 import MasterList from './pages/MasterList';
+import PlanTimeline from './pages/PlanTimeline';
 import Sidebar from './components/Sidebar';
 import { today, daysBetween } from './utils/helpers';
 import { C } from './components/UI';
@@ -75,6 +76,7 @@ function AppLayout() {
         {page === 'newCase' && <NewCase setPage={setPage} />}
         {page === 'cases' && <CasesList />}
         {page === 'entry' && <Entry />}
+        {page === 'planTimeline' && <PlanTimeline />}
         {page === 'masterList' && <MasterList setPage={setPage} />}
         {page === 'admin' && isAdmin && <Admin />}
       </main>

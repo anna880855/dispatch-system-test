@@ -223,6 +223,28 @@ export function AppProvider({ children }) {
     img.src = `${url}?${qs}`;
   }
 
+  function syncPlanToSheets(caseData) {
+    const url = sheetsConfig?.scriptUrl;
+    if (!url) return;
+    const params = {
+      action: 'planTimeline',
+      caseId: caseData.id || '',
+      clientName: caseData.clientName || '',
+      codeType: caseData.codeType || '',
+      region: caseData.region || '',
+      manager: getManagerName(users, caseData.managerId),
+      receiveDate: caseData.receiveDate || '',
+      planDraftDatetime: caseData.planDraftDatetime || '',
+      planSubmitDatetime: caseData.planSubmitDatetime || '',
+      planCompleteDatetime: caseData.planCompleteDatetime || '',
+      hasReturn: caseData.hasReturn ? '是' : '否',
+      returnDatetime: caseData.returnDatetime || '',
+    };
+    const qs = Object.keys(params).map(k => `${encodeURIComponent(k)}=${encodeURIComponent(params[k])}`).join('&');
+    const img = new Image();
+    img.src = `${url}?${qs}`;
+  }
+
   // ── Export ──
   function exportCSV(data, filename) {
     if (!data.length) return;
@@ -241,7 +263,7 @@ export function AppProvider({ children }) {
   const value = {
     currentUser, users, units, cases, masterCases, rotationIndex, sheetsConfig, numberConfig, fbStatus, ready,
     login, logout, addCase, updateCase, deleteCase, addMasterCase, updateMasterCase, deleteMasterCase,
-    saveUsers, saveUnits, saveSheetsConfig, syncToSheets, exportCSV,
+    saveUsers, saveUnits, saveSheetsConfig, syncToSheets, syncPlanToSheets, exportCSV,
     getCurrentRotUnit, advanceRotation, setRotIndex,
     autoGenerateNumber, advanceNumberConfig, saveNumberConfig,
   };
